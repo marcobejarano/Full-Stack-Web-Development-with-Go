@@ -1,0 +1,12 @@
+[INFO] 2024/06/05 20:54 Starting the application...
+[INFO] 2024/06/05 20:54 Database connection fine
+[INFO] 2024/06/05 20:54 Success - user creation
+[INFO] 2024/06/05 20:54 Success - exercise creation
+[INFO] 2024/06/05 20:54 Success - updating workout
+[INFO] 2024/06/05 20:54 Application complete
+[INFO] 2024/06/05 20:55 Starting the application...
+[INFO] 2024/06/05 20:55 Database connection fine
+[INFO] 2024/06/05 20:55 Success - user creation
+[INFO] 2024/06/05 20:55 Success - exercise creation
+[INFO] 2024/06/05 20:55 Success - updating workout
+[INFO] 2024/06/05 20:55 Application complete

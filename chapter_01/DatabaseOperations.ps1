@@ -48,7 +48,7 @@ function teardown_recreate {
     postgresdown
     Start-Sleep -Seconds 5
     postgresup
-    Start-Sleep -Seconds 70
+    Start-Sleep -Seconds 80
     createdb
 }
 
@@ -60,4 +60,19 @@ function generate {
 function teardown_recreate_generate {
     teardown_recreate
     generate
+}
+
+function postgresup_createdb_generate {
+    postgresup
+    Start-Sleep -Seconds 80
+    createdb
+    generate
+}
+
+function build {
+    Write-Host "Building database main sample app"
+    Write-Host "Building for Linux environments: sampledb"
+	go build -o sampledb .
+    Write-Host "Building for Windows environments. sampledb.exe"
+    go build -o sampledb.exe .
 }

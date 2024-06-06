@@ -1,80 +1,93 @@
 package main
 
 import (
-    "context"
-    "database/sql"
-    "fmt"
-    "log"
+	"context"
+	"database/sql"
+	"flag"
+	"fmt"
+	"time"
 
-    chapter_01 "fitness.dev/app/gen"
-    _ "github.com/lib/pq"
+	chapter_01 "fitness.dev/app/gen"
+	"fitness.dev/app/logger"
+	_ "github.com/lib/pq"
 )
 
 func main() {
-    dbURI := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
-        GetAsString("DB_USER", "postgres"),
-        GetAsString("DB_PASSWORD", "Postgres123"),
-        GetAsString("DB_HOST", "localhost"),
-        GetAsInt("DB_PORT", 5432),
-        GetAsString("DB_NAME", "postgres"),
-    )
+	l := flag.Bool("local", false, "true - send to stdout, false - send to logging server")
+	flag.Parse()
 
-    // Open the database
-    db, err := sql.Open("postgres", dbURI)
-    if err != nil {
-        panic(err)
-    }
+	logger.SetLoggingOutput(*l)
 
-    // Connectivity check
-    if err := db.Ping(); err != nil {
-        log.Fatalln("Error from database ping:", err)
-    }
+	logger.Logger.Debugf("Application logging to stdout = %v", *l)
+	logger.Logger.Info("Starting the application...")
 
-    // Create the store
-    st := chapter_01.New(db)
+	dbURI := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
+		GetAsString("DB_USER", "postgres"),
+		GetAsString("DB_PASSWORD", "Postgres123"),
+		GetAsString("DB_HOST", "localhost"),
+		GetAsInt("DB_PORT", 5432),
+		GetAsString("DB_NAME", "postgres"),
+	)
 
-    ctx := context.Background()
+	// Open the database
+	db, err := sql.Open("postgres", dbURI)
+	if err != nil {
+		logger.Logger.Errorf("Error opening database : %s", err.Error())
+	}
 
-    _, err = st.CreateUsers(ctx, chapter_01.CreateUsersParams{
-        UserName:     "testuser",
-        PassWordHash: "hash",
-        Name:         "test",
-    })
+	// Connectivity check
+	if err := db.Ping(); err != nil {
+		logger.Logger.Errorf("Error from database ping: %s", err.Error())
+	}
 
-    if err != nil {
-        log.Fatalln("Error creating user :", err)
-    }
+	logger.Logger.Info("Database connection fine")
 
-    eid, err := st.CreateExercise(ctx, "Exercise1")
+	// Create the store
+	st := chapter_01.New(db)
 
-    if err != nil {
-        log.Fatalln("Error creating exercise :", err)
-    }
+	ctx := context.Background()
 
-    set, err := st.CreateSet(ctx, chapter_01.CreateSetParams{
-        ExerciseID: eid,
-        Weight:     100,
-    })
+	chuser, err := st.CreateUsers(ctx, chapter_01.CreateUsersParams{
+		UserName:     "testuser",
+		PassWordHash: "hash",
+		Name:         "test",
+	})
 
-    if err != nil {
-        log.Fatalln("Error updating exercise :", err)
-    }
+	if err != nil {
+		logger.Logger.Fatal("Error creating user")
+	}
+	logger.Logger.Info("Success - user creation")
 
-    set, err = st.UpdateSet(ctx, chapter_01.UpdateSetParams{
-        ExerciseID: eid,
-        SetID:      set.SetID,
-        Weight:     2000,
-    })
+	eid, err := st.CreateExercise(ctx, "Exercise1")
 
-    if err != nil {
-        log.Fatalln("Error updating set :", err)
-    }
+	if err != nil {
+		logger.Logger.Errorf("Error creating exercise")
+	}
+	logger.Logger.Info("Success - exercise creation")
 
-    log.Println("Done!")
+	sid, err := st.UpsertSet(ctx, chapter_01.UpsertSetParams{
+		ExerciseID: eid,
+		Weight:     100,
+	})
 
-    u, _ := st.ListUsers(ctx)
+	if err != nil {
+		logger.Logger.Errorf("Error updating sets")
+	}
 
-    for _, usr := range u {
-        fmt.Printf("Name : %s, ID : %d\n", usr.Name, usr.UserID)
-    }
+	_, err = st.UpsertWorkout(ctx, chapter_01.UpsertWorkoutParams{
+		UserID:    chuser.UserID,
+		SetID:     sid,
+		StartDate: time.Time{},
+	})
+
+	if err != nil {
+		logger.Logger.Errorf("Error updating workouts")
+	}
+	logger.Logger.Info("Success - updating workout")
+
+	logger.Logger.Info("Application complete")
+
+	// sentry implement something similar
+	// https://github.com/getsentry/sentry-go/blob/master/example/basic/main.go#L50
+	defer time.Sleep(1 * time.Second)
 }
